@@ -1,5 +1,7 @@
 {
   "name": "norbert",
-  "version": "0.1.0",
-  "description": "Local-first observability for Claude Code sessions"
+  "description": "Local-first observability for Claude Code sessions — hooks and MCP server.",
+  "author": {
+    "name": "Phil Van Every"
+  }
 }
