@@ -1,45 +1,76 @@
 {
+  "description": "Norbert observability hooks — sends Claude Code events to the local hook receiver.",
   "hooks": {
     "PreToolUse": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/PreToolUse",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/PreToolUse -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/PostToolUse",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/PostToolUse -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SubagentStop": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/SubagentStop",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/SubagentStop -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/Stop",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/Stop -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "SessionStart": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/SessionStart",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/SessionStart -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "type": "http",
-        "url": "http://localhost:3748/hooks/UserPromptSubmit",
-        "async": true
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -X POST http://localhost:3748/hooks/UserPromptSubmit -H 'Content-Type: application/json' -d @- > /dev/null 2>&1 || true",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
