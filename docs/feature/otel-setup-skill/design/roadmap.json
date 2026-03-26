@@ -1,0 +1,167 @@
+{
+  "roadmap": {
+    "id": "otel-setup-skill",
+    "title": "Norbert OTel Setup Command and Post-Install Guidance",
+    "feature_id": "otel-setup-skill",
+    "date": "2026-03-25",
+    "paradigm": "markdown-instruction",
+    "note": "Deliverables are Markdown files. Claude is the runtime. No application code is written."
+  },
+
+  "rejected_simple_alternatives": [
+    {
+      "alternative": "Plugin-local settings.json only (current state)",
+      "expected_impact": "0% — silently ignored by Claude Code for env activation",
+      "why_insufficient": "This is the exact bug the feature fixes. Confirmed by official Claude Code plugin docs."
+    },
+    {
+      "alternative": "README instructions only",
+      "expected_impact": "~20% — users who re-read README after install",
+      "why_insufficient": "README is passive and forgotten after install. No validation safety net for manual edits. No in-context discoverability."
+    }
+  ],
+
+  "phases": [
+    {
+      "id": "01",
+      "title": "Post-Install Guidance",
+      "steps": [
+        {
+          "id": "01-01",
+          "title": "Create CLAUDE.md at plugin root",
+          "type": "content",
+          "description": "Write CLAUDE.md at plugin root. Content: what Norbert is (one sentence), that OTel setup is required, the exact command /norbert:setup, and that Norbert must be running first.",
+          "produces": ["CLAUDE.md"],
+          "acceptance_criteria": [
+            "CLAUDE.md exists at plugin root alongside .claude-plugin/, hooks/, .mcp.json",
+            "File contains the exact string /norbert:setup",
+            "User-visible content is fewer than 10 lines",
+            "File does not reproduce README content verbatim",
+            "File states Norbert must be running before setup has effect"
+          ],
+          "architectural_constraints": [
+            "File at plugin root — not inside .claude-plugin/ or any subdirectory",
+            "Command name /norbert:setup must match the commands/setup.md filename"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "title": "Setup Command",
+      "steps": [
+        {
+          "id": "02-01",
+          "title": "Write commands/setup.md — happy path and idempotent path",
+          "type": "content",
+          "description": "Write commands/setup.md. Instructions cover: resolve ~, read settings.json, parse JSON, compare 5 OTel keys, merge missing keys into env block, write back, report with + prefix per added key, confirm restart required.",
+          "produces": ["commands/setup.md"],
+          "acceptance_criteria": [
+            "Running /norbert:setup on a fresh settings.json writes all 5 OTel keys with correct names and values",
+            "All pre-existing keys in settings.json are unchanged after the write",
+            "Command output lists each added key with + prefix and instructs restart",
+            "Re-running /norbert:setup when all 5 keys are already correct makes no changes and reports = prefix for each key",
+            "env block is created if absent; no other top-level key is added or removed"
+          ],
+          "architectural_constraints": [
+            "Target is ~/.claude/settings.json — not the plugin-local settings.json",
+            "~ must be resolved to OS home directory ($HOME / %USERPROFILE%)",
+            "Merge is surgical: only the 5 canonical keys are touched"
+          ]
+        },
+        {
+          "id": "02-02",
+          "title": "Add conflict detection and --force support to commands/setup.md",
+          "type": "content",
+          "description": "Extend setup.md instructions: detect per-key value conflicts, display current vs. Norbert value for each conflicting key, write nothing on any conflict, offer --force and manual-edit recovery paths. --force writes all 5 keys regardless of conflicts.",
+          "produces": ["commands/setup.md (extended)"],
+          "acceptance_criteria": [
+            "A conflicting key triggers a warning showing key name, current value, and Norbert's intended value",
+            "No write occurs when any key has a conflict (without --force)",
+            "Output instructs user to re-run with --force or edit manually",
+            "/norbert:setup --force writes all 5 keys and marks overwritten keys with ! prefix",
+            "Keys already at the correct value are shown as = (not flagged as conflicts) even during a --force run"
+          ],
+          "architectural_constraints": [
+            "Conflict check is per-key string equality — no partial match logic",
+            "All-or-nothing write on clean run: no partial writes of non-conflicting keys",
+            "--force flag received via $ARGUMENTS"
+          ]
+        },
+        {
+          "id": "02-03",
+          "title": "Add malformed JSON bail path to commands/setup.md",
+          "type": "content",
+          "description": "Extend setup.md instructions: if settings.json is missing or cannot be parsed as valid JSON, bail immediately with a human-readable error and recovery steps. Do not write anything.",
+          "produces": ["commands/setup.md (extended)"],
+          "acceptance_criteria": [
+            "Malformed JSON produces a human-readable error message — no raw stack trace",
+            "settings.json is not modified on JSON parse failure",
+            "Error output provides recovery steps: open file, validate at jsonlint.com, re-run after fixing",
+            "Missing file scenario is explained with the creation option (echo '{}' > ~/.claude/settings.json)",
+            "Command output mentions Claude Code auto-backup on successful write paths"
+          ],
+          "architectural_constraints": [
+            "Bail immediately — no attempt to repair or partially parse malformed JSON",
+            "File must remain byte-for-byte identical after bail"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "title": "Supporting Updates",
+      "steps": [
+        {
+          "id": "03-01",
+          "title": "Update README.md to document the setup command",
+          "type": "content",
+          "description": "Add a Setup section to README documenting /norbert:setup, clarifying that the plugin-local settings.json does not activate OTel, and noting the restart requirement.",
+          "produces": ["README.md (updated)"],
+          "acceptance_criteria": [
+            "README contains a section documenting /norbert:setup and its purpose",
+            "README notes that plugin-local settings.json env vars are not the activation mechanism",
+            "README states that Claude Code must be restarted after running /norbert:setup"
+          ],
+          "architectural_constraints": [
+            "Do not remove existing README content — append or insert only"
+          ]
+        }
+      ]
+    }
+  ],
+
+  "implementation_scope": {
+    "new_files": [
+      "CLAUDE.md",
+      "commands/setup.md"
+    ],
+    "modified_files": [
+      "README.md"
+    ],
+    "deleted_files": [],
+    "unchanged_files": [
+      "settings.json (plugin root — retained as reference, no modification)"
+    ],
+    "total_steps": 4,
+    "total_production_files": 3,
+    "step_ratio": 1.33,
+    "step_ratio_limit": 2.5,
+    "step_ratio_status": "PASS"
+  },
+
+  "validation": {
+    "quality_gates": [
+      "CLAUDE.md command name matches commands/setup.md filename (/norbert:setup)",
+      "All 5 OTel keys match canonical values from shared-artifacts-registry.md exactly",
+      "~ expansion handled for both Unix ($HOME) and Windows (%USERPROFILE%)",
+      "No write occurs on malformed JSON or any key conflict (without --force)",
+      "settings.json merge is surgical — non-target keys are preserved"
+    ],
+    "integration_checkpoints": [
+      "settings_json_path resolves to user home — not plugin root",
+      "otel_env_keys canonical names and values used verbatim in command instructions",
+      "plugin_claude_md references /norbert:setup exactly as registered"
+    ]
+  }
+}

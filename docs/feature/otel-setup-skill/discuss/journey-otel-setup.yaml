@@ -1,0 +1,256 @@
+journey:
+  name: "OTel Setup for Norbert Plugin"
+  goal: "Configure OpenTelemetry environment variables in ~/.claude/settings.json so Norbert receives telemetry data"
+  feature_id: "otel-setup-skill"
+  persona: "Alex Chen — developer who has just installed norbert-cc-plugin and wants observability to work"
+
+  emotional_arc:
+    start: "Anxious/uncertain — plugin is installed but nothing shows in Norbert dashboard"
+    middle: "Focused/directed — CLAUDE.md in context shows exactly what to run"
+    end: "Confident/satisfied — /norbert:setup writes 5 vars, confirms success, telemetry flows"
+
+  job_stories:
+    - id: JS-1
+      title: "Connect Norbert to OTel"
+      story: |
+        When I have just installed the norbert plugin and want to start collecting telemetry,
+        I want to run a single command that wires up the required environment variables,
+        so I can trust that Norbert is actually receiving data without manually editing settings files.
+      forces:
+        push: "Plugin settings.json has OTel vars but they are silently ignored by Claude Code"
+        pull: "One-command setup with explicit confirmation of what was written"
+        anxiety: "Will it overwrite my existing settings? Is it safe? Is it reversible?"
+        habit: "Developers expect infrastructure config to require manual steps"
+
+    - id: JS-2
+      title: "Protect Existing OTel Configuration"
+      story: |
+        When I already have OTel environment variables configured for a different collector,
+        I want to be warned before any values are overwritten,
+        so I can choose consciously rather than discover data loss after the fact.
+      forces:
+        push: "Silent overwrites of infrastructure config are unacceptable"
+        pull: "Explicit per-key warnings with old vs. new value shown"
+        anxiety: "Warning might be a false alarm requiring manual investigation"
+        habit: "Developers expect tools touching config to be conservative and verbose"
+
+    - id: JS-3
+      title: "Know What to Do After Install"
+      story: |
+        When I have just installed the norbert plugin but have not run setup,
+        I want to be clearly told that OTel configuration is required and exactly how to do it,
+        so I do not waste time wondering why no data appears in Norbert's dashboard.
+      forces:
+        push: "README is read once at install time then forgotten"
+        pull: "In-context CLAUDE.md guidance surfaces automatically — impossible to miss"
+        anxiety: "CLAUDE.md content might clutter context window"
+        habit: "Developers expect plugins to just work without a required second step"
+
+steps:
+  - id: 1
+    name: "Post-Install Discovery"
+    trigger: "Alex opens Claude Code after installing the norbert plugin"
+    mechanism: "CLAUDE.md at plugin root — loaded automatically into context"
+
+    tui_mockup: |
+      +-- Norbert Plugin — Post-Install Note --------------------------------+
+      |                                                                      |
+      |  Norbert is installed. One more step required for telemetry.        |
+      |                                                                      |
+      |  Run this command to configure OpenTelemetry:                       |
+      |                                                                      |
+      |    /norbert:setup                                                    |
+      |                                                                      |
+      |  This merges 5 OTel environment variables into your                 |
+      |  ~/.claude/settings.json.                                           |
+      |                                                                      |
+      +----------------------------------------------------------------------+
+
+    shared_artifacts:
+      - name: "plugin_claude_md"
+        source: "norbert-cc-plugin/CLAUDE.md (plugin root)"
+        displayed_as: "In-context note visible to Claude and user"
+        consumers: ["Claude Code context loader", "User reading context"]
+
+    emotional_state:
+      entry: "Anxious — plugin installed but nothing seems to be working"
+      exit: "Directed — knows exactly what command to run"
+
+    integration_checkpoint: |
+      CLAUDE.md must exist at plugin root (not in .claude-plugin/).
+      Must be concise — long content wastes context tokens.
+      Must contain the exact command: /norbert:setup
+
+  - id: 2
+    name: "Setup Command — Happy Path"
+    trigger: "Alex types /norbert:setup"
+    command: "/norbert:setup"
+    precondition: "~/.claude/settings.json is valid JSON; none of the 5 OTel keys present"
+
+    tui_mockup: |
+      +-- /norbert:setup -------------------------------------------------------+
+      |                                                                          |
+      |  Reading ~/.claude/settings.json ... OK                                  |
+      |                                                                          |
+      |  No existing OTel keys found. Writing 5 variables:                       |
+      |                                                                          |
+      |    + CLAUDE_CODE_ENABLE_TELEMETRY    = 1                                 |
+      |    + OTEL_METRICS_EXPORTER          = otlp                               |
+      |    + OTEL_LOGS_EXPORTER             = otlp                               |
+      |    + OTEL_EXPORTER_OTLP_PROTOCOL   = http/json                           |
+      |    + OTEL_EXPORTER_OTLP_ENDPOINT   = http://127.0.0.1:3748               |
+      |                                                                          |
+      |  All other existing keys preserved.                                      |
+      |  Settings written to ~/.claude/settings.json                             |
+      |  Note: Claude Code creates a timestamped backup automatically.           |
+      |                                                                          |
+      |  OTel configuration complete. Restart Claude Code to apply.             |
+      |                                                                          |
+      +--------------------------------------------------------------------------+
+
+    shared_artifacts:
+      - name: "settings_json_path"
+        source: "~/.claude/settings.json (user's home directory)"
+        displayed_as: "~/.claude/settings.json"
+        consumers: ["Step 2 read", "Step 2 write", "Step 3 idempotent check", "Step 4 conflict check", "Step 5 error bail"]
+      - name: "otel_env_keys"
+        source: "norbert feature spec (these 5 keys, exact names and values)"
+        displayed_as: "5 key=value pairs in output"
+        consumers: ["All setup command scenarios", "BDD scenarios", "shared-artifacts-registry.md"]
+
+    emotional_state:
+      entry: "Focused — running the command"
+      exit: "Confident — sees exactly what was written, explicit success message"
+
+    integration_checkpoint: |
+      Merge operation must NOT replace env block — only set 5 target keys.
+      All other keys in settings.json (permissions, enabledPlugins, etc.) must survive.
+      Output must mention restart requirement — env changes take effect at next session.
+
+  - id: 3
+    name: "Setup Command — Idempotent Path"
+    trigger: "Alex runs /norbert:setup a second time (or checks configuration)"
+    command: "/norbert:setup"
+    precondition: "All 5 OTel keys already present with correct values"
+
+    tui_mockup: |
+      +-- /norbert:setup -------------------------------------------------------+
+      |                                                                          |
+      |  Reading ~/.claude/settings.json ... OK                                  |
+      |                                                                          |
+      |  All 5 OTel keys already set with correct values:                        |
+      |                                                                          |
+      |    = CLAUDE_CODE_ENABLE_TELEMETRY    = 1                                 |
+      |    = OTEL_METRICS_EXPORTER          = otlp                               |
+      |    = OTEL_LOGS_EXPORTER             = otlp                               |
+      |    = OTEL_EXPORTER_OTLP_PROTOCOL   = http/json                           |
+      |    = OTEL_EXPORTER_OTLP_ENDPOINT   = http://127.0.0.1:3748               |
+      |                                                                          |
+      |  No changes made. OTel is already configured correctly.                  |
+      |                                                                          |
+      +--------------------------------------------------------------------------+
+
+    emotional_state:
+      entry: "Uncertain returning user — rechecking"
+      exit: "Reassured — explicit 'already correct' is better than silence"
+
+    integration_checkpoint: |
+      No file write when all values match.
+      Idempotent: safe to run any number of times.
+      Output must show all 5 keys with = prefix (distinct from + for new and ! for warning).
+
+  - id: 4
+    name: "Setup Command — Conflict Path"
+    trigger: "Alex runs /norbert:setup with existing different OTel values"
+    command: "/norbert:setup"
+    precondition: "One or more of the 5 OTel keys exist with different values"
+
+    tui_mockup: |
+      +-- /norbert:setup -------------------------------------------------------+
+      |                                                                          |
+      |  Reading ~/.claude/settings.json ... OK                                  |
+      |                                                                          |
+      |  WARNING: 1 existing key has a different value:                          |
+      |                                                                          |
+      |    ! OTEL_EXPORTER_OTLP_ENDPOINT                                         |
+      |        current value:  http://my-otel-collector:4318                     |
+      |        norbert value:  http://127.0.0.1:3748                             |
+      |                                                                          |
+      |  No changes were made.                                                   |
+      |                                                                          |
+      |  To overwrite with Norbert's values:                                     |
+      |    /norbert:setup --force                                                |
+      |                                                                          |
+      |  To update manually:                                                     |
+      |    Edit ~/.claude/settings.json and remove conflicting keys.             |
+      |                                                                          |
+      +--------------------------------------------------------------------------+
+
+    emotional_state:
+      entry: "Confident (expecting happy path)"
+      exit: "Controlled — warned before damage, given clear next steps"
+
+    integration_checkpoint: |
+      Per-key warning: show key name, current value, Norbert value.
+      No partial write — if ANY key conflicts, write NOTHING.
+      Two recovery paths: --force flag or manual edit.
+      --force writes all 5 keys regardless of conflicts.
+
+  - id: 5
+    name: "Setup Command — Malformed JSON Bail"
+    trigger: "Alex runs /norbert:setup with a corrupted settings.json"
+    command: "/norbert:setup"
+    precondition: "~/.claude/settings.json contains invalid JSON or is missing"
+
+    tui_mockup: |
+      +-- /norbert:setup -------------------------------------------------------+
+      |                                                                          |
+      |  Reading ~/.claude/settings.json ... ERROR                               |
+      |                                                                          |
+      |  Cannot parse ~/.claude/settings.json as valid JSON.                     |
+      |  No changes were made.                                                   |
+      |                                                                          |
+      |  To investigate:                                                         |
+      |    1. Open ~/.claude/settings.json in an editor                          |
+      |    2. Validate at: https://jsonlint.com                                  |
+      |    3. Re-run /norbert:setup after fixing                                 |
+      |                                                                          |
+      |  If settings.json is missing, create an empty one:                      |
+      |    echo '{}' > ~/.claude/settings.json                                   |
+      |                                                                          |
+      +--------------------------------------------------------------------------+
+
+    emotional_state:
+      entry: "Possibly frustrated — fixing a broken state"
+      exit: "Guided — clear recovery steps, reassured nothing was damaged"
+
+    integration_checkpoint: |
+      Bail immediately on JSON parse failure — write nothing.
+      Settings file must remain byte-for-byte identical after bail.
+      Missing file is handled gracefully (explain creation steps, do not create automatically).
+
+integration_validation:
+  shared_artifact_consistency:
+    - artifact: "settings_json_path"
+      must_match_across: [2, 3, 4, 5]
+      failure_message: "All steps must operate on the same ~/.claude/settings.json path — not plugin-local settings.json"
+    - artifact: "otel_env_keys"
+      must_match_across: [2, 3, 4]
+      failure_message: "The 5 key names and target values must be identical across all setup scenarios and BDD tests"
+    - artifact: "plugin_claude_md"
+      must_match_across: [1]
+      failure_message: "CLAUDE.md must reference /norbert:setup exactly as the command is registered"
+
+post_install_messaging:
+  decision: "CLAUDE.md at plugin root"
+  rationale: |
+    Loaded automatically by Claude Code into context when plugin is enabled.
+    Confirmed mechanism in nwave-marketplace plugin and official plugin-structure docs.
+    Does not require code. Survives across sessions. Correct frequency (always visible, not spammy).
+  rejected_alternatives:
+    - option: "companyAnnouncements in plugin settings.json"
+      reason: "Not a documented Claude Code plugin key. No evidence of support."
+    - option: "SessionStart hook with echo"
+      reason: "Fires on every session — annoying. Also requires stdout capture to surface to user."
+    - option: "README only"
+      reason: "Too passive. Users read README once at install and forget it."
