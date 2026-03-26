@@ -31,6 +31,16 @@ From inside Claude Code:
 
 This cleanly removes all hooks and the MCP server. Norbert's app and historical data are unaffected.
 
+## OTel Setup
+
+After installing the plugin, run `/norbert:setup` in a Claude Code session to activate metrics and cost tracking.
+
+The command merges 5 OTel environment variables into `~/.claude/settings.json` (your user-level Claude Code settings). It is idempotent — safe to re-run.
+
+**Important**: The plugin-local `settings.json` at the norbert plugin root contains the same 5 variables but they are silently ignored by Claude Code for environment activation. The only file that matters is `~/.claude/settings.json`. `/norbert:setup` writes to the correct file automatically.
+
+After running `/norbert:setup`, restart Claude Code for the settings to take effect.
+
 ## What it registers
 
 **6 HTTP hooks** (all async, non-blocking):
